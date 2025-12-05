@@ -9,7 +9,7 @@ A machine learning-powered web application designed to identify and flag potenti
 - **Web Interface**: User-friendly web interface for email analysis
 - **REST API**: Backend API for programmatic access
 - **Explainable AI**: Provides explanations for predictions to build user trust
-- **Multiple Datasets**: Trained on various spam and phishing email datasets
+- **Multiple Datasets**: Trained on various spam and phishing email datasets.
 
 ## Project Structure
 
@@ -338,5 +338,6 @@ This project is provided as-is for educational and research purposes.
 For questions or issues, please check the troubleshooting section above or review the code comments for implementation details.
 
 ---
+
 
 **Note**: This system is designed for educational and research purposes. Always use multiple validation methods for production email security systems.
