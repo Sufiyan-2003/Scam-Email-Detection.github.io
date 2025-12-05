@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scam Email Detector</title>
+    <style>
+        :root {
+            --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-secondary: rgba(255, 255, 255, 0.95);
+            --bg-card: rgba(255, 255, 255, 0.98);
+            --bg-glass: rgba(255, 255, 255, 0.1);
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-muted: #a0aec0;
+            --text-white: #ffffff;
+            --border-light: rgba(255, 255, 255, 0.2);
+            --border-color: #e2e8f0;
+            --accent-primary: #667eea;
+            --accent-success: #48bb78;
+            --accent-danger: #f56565;
+            --accent-warning: #ed8936;
+            --input-bg: #f8fafc;
+            --hover-bg: #f0f4ff;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.15);
+            --backdrop-blur: blur(15px);
+            --status-color: var(--accent-primary); /* Default status color */
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --bg-secondary: rgba(26, 32, 44, 0.95);
+            --bg-card: rgba(30, 36, 50, 0.98);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --text-primary: #f7fafc;
+            --text-secondary: #cbd5e0;
+            --text-muted: #718096;
+            --text-white: #ffffff;
+            --border-light: rgba(255, 255, 255, 0.1);
+            --border-color: #4a5568;
+            --accent-primary: #9f7aea;
+            --accent-success: #68d391;
+            --accent-danger: #fc8181;
+            --accent-warning: #f6ad55;
+            --input-bg: #1a202c;
+            --hover-bg: rgba(159, 122, 234, 0.1);
+            --shadow-light: rgba(0, 0, 0, 0.3);
+            --shadow-medium: rgba(0, 0, 0, 0.4);
+            --backdrop-blur: blur(20px);
+            --status-color: var(--accent-primary); /* Default status color */
+        }
+
+        /* Status color themes */
+        [data-status="safe"] {
+            --status-color: var(--accent-success);
+        }
+
+        [data-status="scam"] {
+            --status-color: var(--accent-danger);
+        }
+
+        [data-status="initial"] {
+            --status-color: var(--accent-primary);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Enhanced Background Animation */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Floating orbs background effect */
+        .bg-animation::before,
+        .bg-animation::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: floatOrb 15s ease-in-out infinite;
+        }
+
+        .bg-animation::before {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            top: -100px;
+            left: -100px;
+        }
+
+        .bg-animation::after {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -7s;
+        }
+
+        @keyframes floatOrb {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(50px, 50px) scale(1.1);
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Enhanced Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-glass);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--border-light);
+            border-radius: 50px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 20px var(--shadow-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 8px 30px var(--shadow-medium);
+        }
+
+        .theme-toggle i {
+            font-size: 1.2rem;
+            color: var(--text-white);
+            transition: all 0.3s ease;
+        }
+
+        /* Enhanced Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+        }
+
+        .header-content {
+            background: var(--bg-glass);
+            backdrop-filter: var(--backdrop-blur);
+            border-radius: 30px;
+            padding: 50px;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(transparent, rgba(255, 255, 255, 0.15), transparent);
+            animation: rotate 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo i {
+            font-size: 4rem;
+            color: var(--text-white);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 15px rgba(102, 126, 234, 0.5));
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .logo h1 {
+            font-size: 3rem;
+            color: var(--text-white);
+            font-weight: 800;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #fff, #e0e7ff, #c7d2fe);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1.4rem;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            letter-spacing: 0.5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            flex-grow: 1;
+            align-items: start;
+        }
+
+        /* Enhanced Cards */
+        .card, .result-card, .explanation-card, .error-card {
+            background: var(--bg-card);
+            backdrop-filter: var(--backdrop-blur);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 10px 40px var(--shadow-light);
+            border: 1px solid var(--border-light);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.6s;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: 0 25px 70px var(--shadow-medium);
+        }
+
+        .card h2 {
+            color: var(--text-primary);
+            margin-bottom: 35px;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 700;
+        }
+
+        .card h2 i {
+            color: var(--accent-primary);
+            font-size: 1.8rem;
+        }
+
+        /* Enhanced Method Tabs */
+        .method-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: var(--input-bg);
+            padding: 6px;
+            border-radius: 18px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 30px;
+            border: none;
+            border-radius: 14px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--accent-primary), #9f7aea);
+            transition: left 0.3s;
+            z-index: -1;
+            border-radius: 14px;
+        }
+
+        .tab-btn.active::before {
+            left: 0;
+        }
+
+        .tab-btn.active {
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: var(--hover-bg);
+            transform: translateY(-2px);
+            color: var(--accent-primary);
+        }
+
+        .input-method {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .input-method.active {
+            display: block;
+        }
+
+        /* Enhanced Textarea */
+        textarea {
+            width: 100%;
+            padding: 22px;
+            border: 2px solid var(--border-color);
+            border-radius: 18px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            line-height: 1.7;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), inset 0 2px 8px rgba(0, 0, 0, 0.05);
+            transform: scale(1.01);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Enhanced File Upload */
+        .file-upload-area {
+            border: 3px dashed var(--border-color);
+            border-radius: 20px;
+            padding: 60px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            background: var(--input-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload-area::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
+            opacity: 0;
+            transition: all 0.4s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .file-upload-area:hover::before {
+            width: 400px;
+            height: 400px;
+            opacity: 0.12;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--accent-primary);
+            background: var(--hover-bg);
+            transform: scale(1.02);
+            border-width: 3px;
+        }
+
+        .file-upload-area i {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .file-upload-area:hover i {
+            color: var(--accent-primary);
+            transform: scale(1.15);
+        }
+
+        .file-upload-area p {
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            font-weight: 600;
+        }
+
+        .file-upload-area small {
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 1;
+            font-size: 0.95rem;
+        }
+
+        .file-info {
+            margin-top: 25px;
+            padding: 18px 25px;
+            background: linear-gradient(135deg, var(--accent-success), #38a169);
+            color: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideInUp 0.5s ease;
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+        }
+
+        /* Enhanced Analyze Button */
+        .analyze-btn {
+            width: 100%;
+            padding: 20px 40px;
+            background: linear-gradient(135deg, var(--status-color) 0%, var(--status-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 18px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(var(--status-color), 0.3);
+        }
+
+        .analyze-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--status-color), var(--status-color));
+            transition: left 0.3s;
+        }
+
+        .analyze-btn:hover::before {
+            left: 0;
+        }
+
+        .analyze-btn span, .analyze-btn i {
+            position: relative;
+            z-index: 1;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(var(--status-color), 0.5);
+        }
+
+        .analyze-btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .analyze-btn:disabled::before {
+            display: none;
+        }
+
+        /* Enhanced Loading */
+        .loading {
+            text-align: center;
+            padding: 100px;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 5px solid var(--border-color);
+            border-top: 5px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .spinner::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            border: 3px solid transparent;
+            border-top: 3px solid var(--accent-success);
+            border-radius: 50%;
+            animation: spin 2s linear infinite reverse;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: var(--text-secondary);
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+        /* Enhanced Results */
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .result-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            position: relative;
+            animation: bounceIn 0.8s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .result-icon::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0.3;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .result-icon.safe {
+            background: linear-gradient(135deg, var(--accent-success) 0%, #38a169 100%);
+        }
+
+        .result-icon.scam {
+            background: linear-gradient(135deg, var(--accent-danger) 0%, #e53e3e 100%);
+        }
+
+        .result-text h3 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        .result-text p {
+            color: var(--text-secondary);
+            font-size: 1.3rem;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        /* FIXED: Enhanced Confidence Meter with Correct Animation */
+        .confidence-meter {
+            margin-bottom: 35px;
+        }
+
+        .confidence-meter label {
+            display: block;
+            margin-bottom: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1.15rem;
+        }
+
+        .meter {
+            position: relative;
+            height: 28px;
+            background: var(--input-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid var(--border-color);
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .meter-bar {
+            height: 100%;
+            transition: width 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .meter-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .meter-text {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: 800;
+            font-size: 15px;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+            z-index: 2;
+        }
+
+        /* Enhanced Risk Score */
+        .risk-score {
+            margin-bottom: 35px;
+        }
+
+        .risk-score label {
+            display: block;
+            margin-bottom: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1.15rem;
+        }
+
+        .score-display {
+            font-size: 3rem;
+            font-weight: 900;
+            text-align: center;
+            padding: 25px;
+            border-radius: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: countUp 1s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes countUp {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Enhanced Explanation */
+        .explanation-card h3 {
+            color: var(--text-primary);
+            margin-bottom: 35px;
+            font-size: 1.85rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 700;
+        }
+
+        .reasons-section {
+            margin-bottom: 40px;
+        }
+
+        .reasons-section h4 {
+            color: var(--text-primary);
+            margin-bottom: 22px;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .reasons-section ul {
+            list-style: none;
+        }
+
+        .reasons-section li {
+            padding: 14px 0;
+            padding-left: 35px;
+            position: relative;
+            color: var(--text-primary);
+            line-height: 1.7;
+            animation: slideInLeft 0.5s ease forwards;
+            font-size: 1.05rem;
+        }
+
+        .reasons-section li::before {
+            content: "⚠";
+            color: var(--accent-danger);
+            font-size: 1.3rem;
+            position: absolute;
+            left: 0;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Enhanced Indicators Grid */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .indicator-box {
+            background: var(--input-bg);
+            border-radius: 18px;
+            padding: 28px;
+            border-left: 5px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .indicator-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px var(--shadow-light);
+        }
+
+        .indicator-box h4 {
+            color: var(--text-primary);
+            margin-bottom: 22px;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+        }
+
+        .indicator-content {
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .indicator-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-danger), #e53e3e);
+            color: white;
+            padding: 7px 14px;
+            border-radius: 25px;
+            font-size: 12px;
+            margin: 4px;
+            font-weight: 600;
+            animation: fadeInScale 0.5s ease forwards;
+            box-shadow: 0 3px 10px rgba(245, 101, 101, 0.3);
+        }
+
+        @keyframes fadeInScale {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Enhanced Error State */
+        .error-card {
+            background: linear-gradient(135deg, var(--accent-danger), #e53e3e);
+            color: white;
+            text-align: center;
+            animation: shake 0.5s ease;
+            box-shadow: 0 20px 60px rgba(245, 101, 101, 0.4);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .error-card i {
+            font-size: 4rem;
+            margin-bottom: 25px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .error-card h3 {
+            margin-bottom: 18px;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .error-card p {
+            margin-bottom: 30px;
+            opacity: 0.95;
+            font-size: 1.1rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 14px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Enhanced Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            margin-top: 60px;
+            color: rgba(255, 255, 255, 0.85);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .footer p {
+            margin: 10px 0;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Enhanced Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-20px); opacity: 0; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                max-width: 95%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+            
+            .logo h1 {
+                font-size: 2.2rem;
+            }
+            
+            .logo i {
+                font-size: 3rem;
+            }
+            
+            .indicators-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .method-tabs {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+
+            .theme-toggle {
+                top: 15px;
+                right: 15px;
+            }
+
+            .card, .result-card, .explanation-card {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 30px;
+            }
+
+            .logo {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .logo h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1.15rem;
+            }
+        }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body data-theme="light" data-status="initial">
+    <div class="bg-animation" id="bgAnimation"></div>
+
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Scam Email Detector</h1>
+                </div>
+                <p class="subtitle">AI-Powered Email Security Analysis</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="input-section">
+                <div class="card">
+                    <h2><i class="fas fa-envelope-open-text"></i> Analyze Email</h2>
+                    
+                    <div class="input-methods">
+                        <div class="method-tabs">
+                            <button class="tab-btn active" onclick="switchTab('text')">
+                                <i class="fas fa-keyboard"></i> Paste Text
+                            </button>
+                            <button class="tab-btn" onclick="switchTab('file')">
+                                <i class="fas fa-file-upload"></i> Upload File
+                            </button>
+                        </div>
+
+                        <div id="text-input" class="input-method active">
+                            <textarea 
+                                id="email-content" 
+                                placeholder="Paste your email content here... Include headers if available for better analysis."
+                                rows="12"
+                            ></textarea>
+                        </div>
+
+                        <div id="file-input" class="input-method">
+                            <div class="file-upload-area" onclick="document.getElementById('file-upload').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Click to upload email file</p>
+                                <small>Supports .txt, .eml files</small>
+                                <input type="file" id="file-upload" accept=".txt,.eml" style="display: none;">
+                            </div>
+                            <div id="file-info" class="file-info hidden"></div>
+                        </div>
+                    </div>
+
+                    <button id="analyze-btn" class="analyze-btn" onclick="analyzeEmail()">
+                        <i class="fas fa-search"></i>
+                        <span>Analyze Email</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Analyzing email security...</p>
+                </div>
+
+                <div id="results" class="results hidden">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div id="result-icon" class="result-icon"></div>
+                            <div class="result-text">
+                                <h3 id="result-title"></h3>
+                                <p id="result-subtitle"></p>
+                            </div>
+                        </div>
+
+                        <div class="confidence-meter">
+                            <label>Confidence Level</label>
+                            <div class="meter">
+                                <div id="confidence-bar" class="meter-bar"></div>
+                                <span id="confidence-text" class="meter-text"></span>
+                            </div>
+                        </div>
+
+                        <div class="risk-score">
+                            <label>Risk Score</label>
+                            <div id="risk-display" class="score-display"></div>
+                        </div>
+                    </div>
+
+                    <div class="explanation-card">
+                        <h3><i class="fas fa-info-circle"></i> Analysis Details</h3>
+                        
+                        <div id="main-reasons" class="reasons-section">
+                            <h4>Key Findings</h4>
+                            <ul id="main-reasons-list"></ul>
+                        </div>
+
+                        <div class="indicators-grid">
+                            <div id="suspicious-keywords" class="indicator-box">
+                                <h4><i class="fas fa-exclamation-triangle"></i> Suspicious Keywords</h4>
+                                <div class="indicator-content"></div>
+                            </div>
+
+                            <div id="suspicious-urls" class="indicator-box">
+                                <h4><i class="fas fa-link"></i> Suspicious URLs</h4>
+                                <div class="indicator-content"></div>
+                            </div>
+
+                            <div id="sender-issues" class="indicator-box">
+                                <h4><i class="fas fa-user-shield"></i> Sender Analysis</h4>
+                                <div class="indicator-content"></div>
+                            </div>
+
+                            <div id="structural-issues" class="indicator-box">
+                                <h4><i class="fas fa-code"></i> Structure Analysis</h4>
+                                <div class="indicator-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="error" class="error hidden">
+                    <div class="error-card">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>Analysis Error</h3>
+                        <p id="error-message"></p>
+                        <button onclick="hideError()" class="btn-secondary">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2025 Scam Email Detector - Educational Project</p>
+            <p>Built with Machine Learning & Natural Language Processing</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentTab = 'text';
+        let uploadedFile = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            initializeFileUpload();
+            createBackgroundParticles();
+            initializeTheme();
+            
+            const cards = document.querySelectorAll('.card, .result-card, .explanation-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+            
+            // Set initial status
+            updateStatus('initial');
+        });
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+            
+            const toggle = document.querySelector('.theme-toggle');
+            toggle.style.transform = 'scale(1.2) rotate(360deg)';
+            setTimeout(() => {
+                toggle.style.transform = '';
+            }, 300);
+        }
+
+        function updateThemeIcon(theme) {
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        function createBackgroundParticles() {
+            const bgAnimation = document.getElementById('bgAnimation');
+            const particleCount = 25;
+            
+            for (let i = 0; i < particleCount; i++) {
+                createParticle(bgAnimation);
+            }
+            
+            setInterval(() => {
+                if (document.querySelectorAll('.particle').length < particleCount) {
+                    createParticle(bgAnimation);
+                }
+            }, 2000);
+        }
+
+        function createParticle(container) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+            particle.style.animationDelay = Math.random() * 2 + 's';
+            
+            container.appendChild(particle);
+            
+            setTimeout(() => {
+                if (particle.parentNode) {
+                    particle.parentNode.removeChild(particle);
+                }
+            }, 25000);
+        }
+
+        function setupEventListeners() {
+            const fileUpload = document.getElementById('file-upload');
+            if (fileUpload) {
+                fileUpload.addEventListener('change', handleFileUpload);
+            }
+            
+            // Listen for changes in email content to update status
+            const emailContent = document.getElementById('email-content');
+            if (emailContent) {
+                emailContent.addEventListener('input', function() {
+                    if (this.value.trim() === '') {
+                        updateStatus('initial');
+                    }
+                });
+            }
+        }
+
+        function updateStatus(status) {
+            document.body.setAttribute('data-status', status);
+            
+            // Update analyze button color based on status
+            const analyzeBtn = document.getElementById('analyze-btn');
+            if (analyzeBtn && !analyzeBtn.disabled) {
+                analyzeBtn.style.background = `linear-gradient(135deg, var(--status-color) 0%, var(--status-color) 100%)`;
+                analyzeBtn.style.boxShadow = `0 8px 25px rgba(var(--status-color), 0.3)`;
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            
+            document.querySelectorAll('.input-method').forEach(method => {
+                method.classList.remove('active');
+            });
+            
+            setTimeout(() => {
+                document.getElementById(`${tab}-input`).classList.add('active');
+            }, 150);
+            
+            hideResults();
+        }
+
+        function initializeFileUpload() {
+            const fileUploadArea = document.querySelector('.file-upload-area');
+            
+            fileUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUploadArea.style.borderColor = 'var(--accent-primary)';
+                fileUploadArea.style.background = 'var(--hover-bg)';
+                fileUploadArea.style.transform = 'scale(1.02)';
+            });
+            
+            fileUploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                fileUploadArea.style.borderColor = 'var(--border-color)';
+                fileUploadArea.style.background = 'var(--input-bg)';
+                fileUploadArea.style.transform = 'scale(1)';
+            });
+            
+            fileUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUploadArea.style.borderColor = 'var(--border-color)';
+                fileUploadArea.style.background = 'var(--input-bg)';
+                fileUploadArea.style.transform = 'scale(1)';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFileSelection(file);
+            }
+        }
+
+        function handleFileSelection(file) {
+            const allowedTypes = ['.txt', '.eml'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(fileExtension)) {
+                showError('Please upload a .txt or .eml file.');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                showError('File size must be less than 5MB.');
+                return;
+            }
+            
+            uploadedFile = file;
+            
+            const fileInfo = document.getElementById('file-info');
+            fileInfo.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-file-alt" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>${file.name}</strong><br>
+                        <small style="opacity: 0.8;">${formatFileSize(file.size)}</small>
+                    </div>
+                </div>
+                <button onclick="clearFile()" class="btn-secondary" style="padding: 8px 12px; font-size: 0.9rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            fileInfo.classList.remove('hidden');
+            
+            hideResults();
+        }
+
+        function clearFile() {
+            uploadedFile = null;
+            document.getElementById('file-upload').value = '';
+            const fileInfo = document.getElementById('file-info');
+            fileInfo.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => {
+                fileInfo.classList.add('hidden');
+                fileInfo.style.animation = '';
+            }, 300);
+            hideResults();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function analyzeEmail() {
+            let emailContent = '';
+            
+            if (currentTab === 'text') {
+                emailContent = document.getElementById('email-content').value.trim();
+                if (!emailContent) {
+                    showError('Please enter email content to analyze.');
+                    return;
+                }
+            } else if (currentTab === 'file') {
+                if (!uploadedFile) {
+                    showError('Please upload a file to analyze.');
+                    return;
+                }
+                
+                try {
+                    emailContent = await readFileContent(uploadedFile);
+                } catch (error) {
+                    showError('Failed to read the uploaded file.');
+                    return;
+                }
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email_content: emailContent
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                if (error.message.includes('fetch')) {
+                    showError('Unable to connect to the analysis server. Please make sure the backend is running on localhost:5000.');
+                } else {
+                    showError('An error occurred during analysis. Please try again.');
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            
+            const analyzeBtn = document.getElementById('analyze-btn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Analyzing...</span>';
+            analyzeBtn.style.background = 'var(--text-muted)';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+            
+            const analyzeBtn = document.getElementById('analyze-btn');
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-search"></i> <span>Analyze Email</span>';
+        }
+
+        function displayResults(result) {
+            hideError();
+            document.getElementById('results').classList.remove('hidden');
+            
+            const resultIcon = document.getElementById('result-icon');
+            const resultTitle = document.getElementById('result-title');
+            const resultSubtitle = document.getElementById('result-subtitle');
+            
+            if (result.prediction === 'scam') {
+                resultIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                resultIcon.className = 'result-icon scam';
+                resultTitle.textContent = 'Suspicious Email Detected';
+                resultTitle.style.color = 'var(--accent-danger)';
+                resultSubtitle.textContent = 'This email shows signs of being a scam or phishing attempt';
+                
+                // Update status to scam
+                updateStatus('scam');
+            } else {
+                resultIcon.innerHTML = '<i class="fas fa-shield-alt"></i>';
+                resultIcon.className = 'result-icon safe';
+                resultTitle.textContent = 'Email Appears Safe';
+                resultTitle.style.color = 'var(--accent-success)';
+                resultSubtitle.textContent = 'No significant suspicious patterns detected';
+                
+                // Update status to safe
+                updateStatus('safe');
+            }
+            
+            // FIXED: Correct confidence bar animation based on actual confidence value
+            const confidenceBar = document.getElementById('confidence-bar');
+            const confidenceText = document.getElementById('confidence-text');
+            const confidence = Math.round(result.confidence * 100);
+            
+            setTimeout(() => {
+                confidenceBar.style.width = confidence + '%';
+                confidenceText.textContent = confidence + '%';
+            }, 300);
+            
+            if (result.prediction === 'scam') {
+                confidenceBar.style.background = 'linear-gradient(90deg, var(--accent-danger), #e53e3e)';
+            } else {
+                confidenceBar.style.background = 'linear-gradient(90deg, var(--accent-success), #38a169)';
+            }
+            
+            // FIXED: Display risk score correctly (out of 10)
+            const riskDisplay = document.getElementById('risk-display');
+            const riskScore = result.risk_score || 0;
+            riskDisplay.textContent = riskScore.toFixed(1) + '/10';
+            
+            if (riskScore >= 7) {
+                riskDisplay.style.background = 'linear-gradient(135deg, var(--accent-danger) 0%, #e53e3e 100%)';
+            } else if (riskScore >= 4) {
+                riskDisplay.style.background = 'linear-gradient(135deg, var(--accent-warning) 0%, #dd6b20 100%)';
+            } else {
+                riskDisplay.style.background = 'linear-gradient(135deg, var(--accent-success) 0%, #38a169 100%)';
+            }
+            
+            if (result.explanation) {
+                displayExplanation(result.explanation);
+            }
+        }
+
+        function displayExplanation(explanation) {
+    const mainReasonsList = document.getElementById('main-reasons-list');
+    mainReasonsList.innerHTML = '';
+    
+    if (explanation.main_reasons && explanation.main_reasons.length > 0) {
+        explanation.main_reasons.forEach((reason, index) => {
+            const li = document.createElement('li');
+            li.textContent = reason;
+            li.style.animationDelay = `${index * 0.1}s`;
+            mainReasonsList.appendChild(li);
+        });
+    } else {
+        const li = document.createElement('li');
+        li.textContent = 'No specific red flags detected';
+        li.style.color = 'var(--accent-success)';
+        li.style.fontWeight = '500';
+        mainReasonsList.appendChild(li);
+    }
+    
+    // Enhanced indicator display with proper data handling
+    const keywordsBox = document.getElementById('suspicious-keywords');
+    if (explanation.suspicious_keywords && explanation.suspicious_keywords.length > 0) {
+        displayIndicator(keywordsBox, explanation.suspicious_keywords, 'No suspicious keywords found');
+    } else {
+        displayIndicator(keywordsBox, [], 'No suspicious keywords found');
+    }
+    
+    const urlsBox = document.getElementById('suspicious-urls');
+    if (explanation.suspicious_urls && explanation.suspicious_urls.length > 0) {
+        displayIndicator(urlsBox, explanation.suspicious_urls, 'No suspicious URLs detected');
+    } else {
+        displayIndicator(urlsBox, [], 'No suspicious URLs detected');
+    }
+    
+    const senderBox = document.getElementById('sender-issues');
+    if (explanation.sender_issues && explanation.sender_issues.length > 0) {
+        displayIndicator(senderBox, explanation.sender_issues, 'Sender appears legitimate');
+    } else {
+        displayIndicator(senderBox, [], 'Sender appears legitimate');
+    }
+    
+    const structuralBox = document.getElementById('structural-issues');
+    if (explanation.structural_issues && explanation.structural_issues.length > 0) {
+        displayIndicator(structuralBox, explanation.structural_issues, 'Email structure appears normal');
+    } else {
+        displayIndicator(structuralBox, [], 'Email structure appears normal');
+    }
+}
+
+        function displayIndicator(container, items, emptyMessage) {
+            const content = container.querySelector('.indicator-content');
+            
+            if (items && items.length > 0) {
+                if (typeof items[0] === 'string') {
+                    content.innerHTML = items.map((item, index) => 
+                        `<span class="indicator-tag" style="animation-delay: ${index * 0.05}s">${escapeHtml(item)}</span>`
+                    ).join('');
+                } else {
+                    content.innerHTML = items.map((item, index) => 
+                        `<div style="animation: slideInLeft 0.5s ease ${index * 0.05}s forwards; opacity: 0;">${escapeHtml(item.toString())}</div>`
+                    ).join('');
+                }
+                container.style.borderLeftColor = 'var(--accent-danger)';
+                container.style.background = 'linear-gradient(135deg, rgba(245, 101, 101, 0.1), rgba(229, 62, 62, 0.05))';
+            } else {
+                content.innerHTML = `<em style="color: var(--accent-success); font-weight: 500;">${emptyMessage}</em>`;
+                container.style.borderLeftColor = 'var(--accent-success)';
+                container.style.background = 'linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(56, 161, 105, 0.05))';
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            hideLoading();
+        }
+
+        function hideError() {
+            const errorElement = document.getElementById('error');
+            errorElement.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+                errorElement.style.animation = '';
+            }, 300);
+        }
+
+        function hideResults() {
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        function loadSampleEmail(type) {
+            if (type === 'phishing') {
+                document.getElementById('email-content').value = `Subject: URGENT: Verify Your Account Immediately
+
+From: security@paypaI-security.com
+To: user@example.com
+
+Dear Valued Customer,
+
+We have detected suspicious activity on your PayPal account. Your account will be suspended within 24 hours unless you verify your information immediately.
+
+CLICK HERE TO VERIFY NOW: http://bit.ly/paypal-verify-urgent
+
+Failure to verify will result in permanent account closure. This is a limited time offer.
+
+Act now to secure your account!
+
+PayPal Security Team
+© 2024 PayPal Inc.`;
+            } else if (type === 'legitimate') {
+                document.getElementById('email-content').value = `Subject: Your Monthly Statement is Ready
+
+From: noreply@yourbank.com
+To: customer@example.com
+
+Dear John Smith,
+
+Your monthly statement for Account ****1234 is now available in your online banking portal.
+
+To view your statement:
+1. Log in to your account at https://yourbank.com
+2. Navigate to Statements & Documents
+3. Select your current statement
+
+If you have any questions, please contact us at 1-800-BANK-HELP or visit our website.
+
+Best regards,
+Customer Service Team
+Your Bank
+Member FDIC`;
+            }
+            
+            if (currentTab !== 'text') {
+                switchTab('text');
+            }
+            
+            hideResults();
+            
+            const textarea = document.getElementById('email-content');
+            textarea.style.boxShadow = '0 0 0 4px rgba(102, 126, 234, 0.3)';
+            setTimeout(() => {
+                textarea.style.boxShadow = '';
+            }, 1000);
+        }
+
+        window.loadSampleEmail = loadSampleEmail;
+    </script>
+</body>
+</html>

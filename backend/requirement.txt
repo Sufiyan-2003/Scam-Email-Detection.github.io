@@ -1,0 +1,17 @@
+flask
+flask-cors
+pandas
+numpy
+scikit-learn
+nltk
+beautifulsoup4
+textstat
+joblib
+matplotlib
+seaborn
+email-validator
+python-email-validator
+lxml
+requests
+urllib3
+chardet
